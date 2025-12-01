@@ -18,17 +18,20 @@ import org.opencv.imgproc.Imgproc.*
 import java.io.Closeable
 import java.lang.Integer.max
 
-class OcrEngine(context: Context) : Closeable {
+class OcrEngine(
+    private val context: Context,
+    private val modelVersion: OcrModelVersion = OcrModelVersion.V3
+) : Closeable {
 
     private val assetManager: AssetManager = context.assets
 
     private val ortEnv by lazy { OrtEnvironment.getEnvironment() }
 
-    private val det by lazy { Det(ortEnv, assetManager, DET_NAME) }
+    private val det by lazy { Det(ortEnv, context, modelVersion.detModelName) }
 
-    private val cls by lazy { Cls(ortEnv, assetManager, CLS_NAME) }
+    private val cls by lazy { Cls(ortEnv, context, modelVersion.clsModelName) }
 
-    private val rec by lazy { Rec(ortEnv, assetManager, REC_NAME, KEYS_NAME) }
+    private val rec by lazy { Rec(ortEnv, context, modelVersion.recModelName, modelVersion.keysName) }
 
     init {
         if (OpenCVLoader.initDebug()) {
@@ -185,14 +188,6 @@ class OcrEngine(context: Context) : Closeable {
             fullTime = fullTickMeter.timeMilli,
             text = text,
         )
-    }
-
-
-    companion object {
-        private const val DET_NAME = "ch_PP-OCRv3_det_infer.onnx"
-        private const val CLS_NAME = "ch_ppocr_mobile_v2.0_cls_infer.onnx"
-        private const val REC_NAME = "ch_PP-OCRv3_rec_infer.onnx"
-        private const val KEYS_NAME = "ppocr_keys_v1.txt"
     }
 
 

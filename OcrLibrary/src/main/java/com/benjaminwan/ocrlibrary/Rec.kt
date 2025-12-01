@@ -2,22 +2,22 @@ package com.benjaminwan.ocrlibrary
 
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
-import android.content.res.AssetManager
+import android.content.Context
 import com.benjaminwan.ocrlibrary.models.RecResult
 import org.opencv.core.Mat
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc.resize
 import java.util.*
 
-class Rec(private val ortEnv: OrtEnvironment, assetManager: AssetManager, modelName: String, keysName: String) {
+class Rec(private val ortEnv: OrtEnvironment, private val context: Context, private val modelName: String, private val keysName: String) {
 
     private val session by lazy {
-        val model = assetManager.open(modelName, AssetManager.ACCESS_UNKNOWN).readBytes()
+        val model = ModelLoader.loadModel(context, modelName)
         ortEnv.createSession(model)
     }
 
     private val keys by lazy {
-        val reader = assetManager.open(keysName, AssetManager.ACCESS_UNKNOWN).bufferedReader()
+        val reader = ModelLoader.loadKeys(context, keysName)
         reader.lineSequence().toMutableList().apply {
             add(0, "#")
             add(" ")

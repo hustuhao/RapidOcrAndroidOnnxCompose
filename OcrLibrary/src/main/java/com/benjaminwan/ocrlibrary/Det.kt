@@ -3,7 +3,7 @@ package com.benjaminwan.ocrlibrary
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.TensorInfo
-import android.content.res.AssetManager
+import android.content.Context
 import com.benjaminwan.ocrlibrary.models.DetPoint
 import com.benjaminwan.ocrlibrary.models.DetResult
 import com.benjaminwan.ocrlibrary.models.ScaleParam
@@ -11,10 +11,10 @@ import org.opencv.core.*
 import org.opencv.imgproc.Imgproc
 import java.util.*
 
-class Det(private val ortEnv: OrtEnvironment, assetManager: AssetManager, modelName: String) {
+class Det(private val ortEnv: OrtEnvironment, private val context: Context, private val modelName: String) {
 
     private val session by lazy {
-        val model = assetManager.open(modelName, AssetManager.ACCESS_UNKNOWN).readBytes()
+        val model = ModelLoader.loadModel(context, modelName)
         ortEnv.createSession(model)
     }
 

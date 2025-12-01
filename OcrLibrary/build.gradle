@@ -48,8 +48,8 @@ dependencies {
     implementation "androidx.core:core-ktx:$core_version"
     //Logger
     implementation 'com.orhanobut:logger:2.2.0'
-    //onnxruntime
-    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.13.1'
+    //onnxruntime - upgraded to support PP-OCRv5 models
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.19.2'
     //opencv
     implementation project(':opencv')
 }

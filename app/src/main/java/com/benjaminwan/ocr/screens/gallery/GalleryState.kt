@@ -4,6 +4,7 @@ import android.net.Uri
 import com.airbnb.mvrx.Async
 import com.airbnb.mvrx.Uninitialized
 import com.benjaminwan.ocr.base.BaseState
+import com.benjaminwan.ocrlibrary.OcrModelVersion
 import com.benjaminwan.ocrlibrary.models.OcrResult
 
 data class GalleryState(
@@ -11,6 +12,9 @@ data class GalleryState(
     val selectTab: GalleryTab = tabs.first(),
     val detectRequest: Async<OcrResult> = Uninitialized,//打开文件
     val imageUri: Uri? = null,
+    val modelVersion: OcrModelVersion = OcrModelVersion.V3,
+    val isDownloadingModel: Boolean = false,
+    val downloadProgress: Float = 0f,
     val scaleUp: Boolean = false,
     val maxSideLen: String = DEFAULT_MAX_SIDE_LEN,
     val maxSideLenError: Boolean = false,
