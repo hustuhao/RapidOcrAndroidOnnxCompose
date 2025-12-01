@@ -3,28 +3,15 @@ package com.benjaminwan.ocrlibrary
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import android.content.Context
-import android.content.res.AssetManager
 import com.benjaminwan.ocrlibrary.models.ClsResult
 import org.opencv.core.Mat
-import java.io.File
 import java.util.*
 
 class Cls(private val ortEnv: OrtEnvironment, private val context: Context, private val modelName: String) {
 
     private val session by lazy {
-        val model = loadModel(modelName)
+        val model = ModelLoader.loadModel(context, modelName)
         ortEnv.createSession(model)
-    }
-
-    private fun loadModel(modelName: String): ByteArray {
-        // 优先从内部存储加载
-        val file = File(context.filesDir, "models/$modelName")
-        return if (file.exists()) {
-            file.readBytes()
-        } else {
-            // 降级到assets
-            context.assets.open(modelName, AssetManager.ACCESS_UNKNOWN).readBytes()
-        }
     }
 
     private fun getClsResult(src: Mat): ClsResult {

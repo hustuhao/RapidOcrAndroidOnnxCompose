@@ -1,5 +1,7 @@
 package com.benjaminwan.ocrlibrary
 
+import com.orhanobut.logger.Logger
+
 enum class OcrModelVersion(
     val versionName: String,
     val detModelName: String,
@@ -43,7 +45,10 @@ enum class OcrModelVersion(
 
     companion object {
         fun fromName(name: String): OcrModelVersion {
-            return values().find { it.name == name } ?: V3
+            return values().find { it.name == name } ?: run {
+                Logger.w("Unknown model version: $name, fallback to V3")
+                V3
+            }
         }
     }
 }

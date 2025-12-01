@@ -150,6 +150,10 @@ class GalleryViewModel(
 
     fun detect() = suspend {
         val state = awaitState()
+        // 检查是否正在切换模型版本，避免并发问题
+        if (state.isDownloadingModel) {
+            throw Exception("模型正在切换中，请稍后再试")
+        }
         val uri = state.imageUri ?: throw Exception("uri is null")
         val bmp = context.decodeUri(uri) ?: throw Exception("bitmap is null")
         val scaleUp = state.scaleUp

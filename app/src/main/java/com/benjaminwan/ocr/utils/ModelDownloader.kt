@@ -42,10 +42,10 @@ class ModelDownloader(private val context: Context) {
                 }
             }
 
-            if (version.keysUrl != null) {
+            version.keysUrl?.let { keysUrl ->
                 val keysFile = File(modelsDir, version.keysName)
                 if (!keysFile.exists()) {
-                    filesToDownload.add(version.keysUrl!! to version.keysName)
+                    filesToDownload.add(keysUrl to version.keysName)
                 }
             }
 
@@ -84,30 +84,47 @@ class ModelDownloader(private val context: Context) {
         targetFile: File,
         onProgress: (Float) -> Unit
     ) = withContext(Dispatchers.IO) {
-        val connection = URL(url).openConnection()
-        connection.connect()
-
-        val fileLength = connection.contentLength
-        val input = connection.getInputStream()
-        val output = targetFile.outputStream()
-
-        val buffer = ByteArray(8192)
-        var total: Long = 0
-        var count: Int
+        // 下载到临时文件，成功后再重命名，避免下载失败后残留不完整文件
+        val tempFile = File(targetFile.parent, "${targetFile.name}.tmp")
 
         try {
-            while (input.read(buffer).also { count = it } != -1) {
-                total += count
-                output.write(buffer, 0, count)
-
-                if (fileLength > 0) {
-                    onProgress(total.toFloat() / fileLength)
-                }
+            val connection = URL(url).openConnection().apply {
+                connectTimeout = 30_000 // 30秒连接超时
+                readTimeout = 60_000    // 60秒读取超时
             }
-        } finally {
-            output.flush()
-            output.close()
-            input.close()
+            connection.connect()
+
+            val fileLength = connection.contentLength
+            val input = connection.getInputStream()
+            val output = tempFile.outputStream()
+
+            val buffer = ByteArray(8192)
+            var total: Long = 0
+            var count: Int
+
+            try {
+                while (input.read(buffer).also { count = it } != -1) {
+                    total += count
+                    output.write(buffer, 0, count)
+
+                    if (fileLength > 0) {
+                        onProgress(total.toFloat() / fileLength)
+                    }
+                }
+            } finally {
+                output.flush()
+                output.close()
+                input.close()
+            }
+
+            // 下载成功，重命名临时文件为目标文件
+            if (!tempFile.renameTo(targetFile)) {
+                throw Exception("Failed to rename temp file to target file")
+            }
+        } catch (e: Exception) {
+            // 下载失败，删除临时文件
+            tempFile.delete()
+            throw e
         }
     }
 
