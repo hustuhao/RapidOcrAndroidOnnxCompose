@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,6 +44,7 @@ import com.benjaminwan.ocr.screens.gallery.GalleryState.Companion.rangeStr
 import com.benjaminwan.ocr.screens.gallery.GalleryState.Companion.unClipRatioRange
 import com.benjaminwan.ocr.ui.widget.InfoCardView
 import com.benjaminwan.ocr.ui.widget.RowInfoView
+import com.benjaminwan.ocrlibrary.OcrModelVersion
 
 @Composable
 fun GalleryScreen(navController: NavHostController) {
@@ -152,6 +154,7 @@ private fun PictureView(state: GalleryState) {
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun ParamView(vm: GalleryViewModel, state: GalleryState) {
     val editEnabled = state.detectRequest !is Loading
@@ -160,6 +163,59 @@ private fun ParamView(vm: GalleryViewModel, state: GalleryState) {
         horizontalAlignment = Alignment.CenterHorizontally,
         contentPadding = PaddingValues(4.dp),
     ) {
+        // OCR模型版本选择
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "OCR模型版本",
+                    style = MaterialTheme.typography.h6,
+                    color = MaterialTheme.colors.primary
+                )
+                Text(
+                    text = "选择PP-OCR模型版本，首次使用时会自动下载",
+                    style = MaterialTheme.typography.caption,
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    OcrModelVersion.values().forEach { version ->
+                        FilterChip(
+                            selected = state.modelVersion == version,
+                            onClick = {
+                                if (editEnabled && !state.isDownloadingModel) {
+                                    vm.setModelVersion(version)
+                                }
+                            },
+                            enabled = editEnabled && !state.isDownloadingModel
+                        ) {
+                            Text(text = version.versionName)
+                        }
+                    }
+                }
+
+                // 下载进度条
+                if (state.isDownloadingModel) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = state.downloadProgress,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Text(
+                        text = "下载中... ${(state.downloadProgress * 100).toInt()}%",
+                        style = MaterialTheme.typography.caption,
+                        color = MaterialTheme.colors.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider(modifier = Modifier.height(2.dp))
+            }
+        }
+
         item {
             Column {
                 Text(text = "默认关，scaleUp 放大使能；禁用时只进行图片缩小，不进行放大；启用时，原图长边小于maxSideLen时会放大，原图长边大于maxSideLen时会缩小", color = MaterialTheme.colors.primary)

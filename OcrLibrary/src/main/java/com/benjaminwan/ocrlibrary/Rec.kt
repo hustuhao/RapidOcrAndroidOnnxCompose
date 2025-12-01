@@ -2,26 +2,50 @@ package com.benjaminwan.ocrlibrary
 
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
+import android.content.Context
 import android.content.res.AssetManager
 import com.benjaminwan.ocrlibrary.models.RecResult
 import org.opencv.core.Mat
 import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc.resize
+import java.io.File
 import java.util.*
 
-class Rec(private val ortEnv: OrtEnvironment, assetManager: AssetManager, modelName: String, keysName: String) {
+class Rec(private val ortEnv: OrtEnvironment, private val context: Context, private val modelName: String, private val keysName: String) {
 
     private val session by lazy {
-        val model = assetManager.open(modelName, AssetManager.ACCESS_UNKNOWN).readBytes()
+        val model = loadModel(modelName)
         ortEnv.createSession(model)
     }
 
     private val keys by lazy {
-        val reader = assetManager.open(keysName, AssetManager.ACCESS_UNKNOWN).bufferedReader()
+        val reader = loadKeys(keysName)
         reader.lineSequence().toMutableList().apply {
             add(0, "#")
             add(" ")
         }.toList()
+    }
+
+    private fun loadModel(modelName: String): ByteArray {
+        // 优先从内部存储加载
+        val file = File(context.filesDir, "models/$modelName")
+        return if (file.exists()) {
+            file.readBytes()
+        } else {
+            // 降级到assets
+            context.assets.open(modelName, AssetManager.ACCESS_UNKNOWN).readBytes()
+        }
+    }
+
+    private fun loadKeys(keysName: String): java.io.BufferedReader {
+        // 优先从内部存储加载
+        val file = File(context.filesDir, "models/$keysName")
+        return if (file.exists()) {
+            file.bufferedReader()
+        } else {
+            // 降级到assets
+            context.assets.open(keysName, AssetManager.ACCESS_UNKNOWN).bufferedReader()
+        }
     }
 
     private fun scoreToTextLine(outputData: List<FloatArray>): RecResult {
