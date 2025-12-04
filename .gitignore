@@ -89,3 +89,6 @@ other/~*.xlsx
 
 # opencv
 sdk
+
+# Claude Code
+.claude/
