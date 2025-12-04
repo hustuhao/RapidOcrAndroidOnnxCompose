@@ -9,15 +9,21 @@ import org.opencv.core.Size
 import org.opencv.imgproc.Imgproc.resize
 import java.util.*
 
-class Rec(private val ortEnv: OrtEnvironment, private val context: Context, private val modelName: String, private val keysName: String) {
+internal class Rec(
+    private val ortEnv: OrtEnvironment,
+    private val context: Context,
+    private val recResolvedPath: com.benjaminwan.ocrlibrary.config.ResolvedPath,
+    private val keysResolvedPath: com.benjaminwan.ocrlibrary.config.ResolvedPath,
+    private val loadStrategy: com.benjaminwan.ocrlibrary.config.OcrLoadStrategy
+) {
 
     private val session by lazy {
-        val model = ModelLoader.loadModel(context, modelName)
+        val model = ModelLoader.loadModel(context, recResolvedPath, loadStrategy)
         ortEnv.createSession(model)
     }
 
     private val keys by lazy {
-        val reader = ModelLoader.loadKeys(context, keysName)
+        val reader = ModelLoader.loadKeys(context, keysResolvedPath, loadStrategy)
         reader.lineSequence().toMutableList().apply {
             add(0, "#")
             add(" ")

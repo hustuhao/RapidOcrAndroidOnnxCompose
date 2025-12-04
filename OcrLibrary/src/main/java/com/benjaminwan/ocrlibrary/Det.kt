@@ -11,10 +11,15 @@ import org.opencv.core.*
 import org.opencv.imgproc.Imgproc
 import java.util.*
 
-class Det(private val ortEnv: OrtEnvironment, private val context: Context, private val modelName: String) {
+internal class Det(
+    private val ortEnv: OrtEnvironment,
+    private val context: Context,
+    private val resolvedPath: com.benjaminwan.ocrlibrary.config.ResolvedPath,
+    private val loadStrategy: com.benjaminwan.ocrlibrary.config.OcrLoadStrategy
+) {
 
     private val session by lazy {
-        val model = ModelLoader.loadModel(context, modelName)
+        val model = ModelLoader.loadModel(context, resolvedPath, loadStrategy)
         ortEnv.createSession(model)
     }
 

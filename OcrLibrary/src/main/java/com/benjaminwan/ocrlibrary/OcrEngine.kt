@@ -4,6 +4,7 @@ import ai.onnxruntime.OrtEnvironment
 import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.Bitmap
+import com.benjaminwan.ocrlibrary.config.*
 import com.benjaminwan.ocrlibrary.models.OcrResult
 import com.benjaminwan.ocrlibrary.models.ScaleParam
 import com.orhanobut.logger.Logger
@@ -18,27 +19,116 @@ import org.opencv.imgproc.Imgproc.*
 import java.io.Closeable
 import java.lang.Integer.max
 
-class OcrEngine(
+/**
+ * OCR 引擎
+ *
+ * 提供完整的 OCR 识别功能，包括文本检测、方向分类和文本识别
+ *
+ * @param context Android Context
+ * @param modelVersion 模型版本
+ * @param config 配置对象（可选），为 null 时使用全局配置或默认配置
+ * @param strictMode 严格模式，true 时在构造时验证所有路径，false 时延迟验证
+ *
+ * @sample
+ * ```kotlin
+ * // 使用默认配置
+ * val engine = OcrEngine(context, OcrModelVersion.V3)
+ *
+ * // 使用自定义配置
+ * val config = OcrConfig.builder()
+ *     .pathConfig { fromVersion("/sdcard/models", OcrModelVersion.V4) }
+ *     .build()
+ * val engine = OcrEngine(context, OcrModelVersion.V4, config)
+ * ```
+ */
+class OcrEngine private constructor(
     private val context: Context,
-    private val modelVersion: OcrModelVersion = OcrModelVersion.V3
+    private val modelVersion: OcrModelVersion,
+    private val effectiveConfig: OcrConfig?,
+    private val resolvedPaths: ResolvedPaths
 ) : Closeable {
 
     private val assetManager: AssetManager = context.assets
 
     private val ortEnv by lazy { OrtEnvironment.getEnvironment() }
 
-    private val det by lazy { Det(ortEnv, context, modelVersion.detModelName) }
+    private val det by lazy {
+        Det(ortEnv, context, resolvedPaths.detPath, effectiveConfig?.loadStrategy ?: OcrLoadStrategy.FILE_FIRST)
+    }
 
-    private val cls by lazy { Cls(ortEnv, context, modelVersion.clsModelName) }
+    private val cls by lazy {
+        Cls(ortEnv, context, resolvedPaths.clsPath, effectiveConfig?.loadStrategy ?: OcrLoadStrategy.FILE_FIRST)
+    }
 
-    private val rec by lazy { Rec(ortEnv, context, modelVersion.recModelName, modelVersion.keysName) }
+    private val rec by lazy {
+        Rec(
+            ortEnv,
+            context,
+            resolvedPaths.recPath,
+            resolvedPaths.keysPath,
+            effectiveConfig?.loadStrategy ?: OcrLoadStrategy.FILE_FIRST
+        )
+    }
 
-    init {
-        if (OpenCVLoader.initDebug()) {
-            Logger.i("OpenCV library found inside package.")
-        } else {
-            Logger.e("Internal OpenCV library not found.")
-            throw UnsatisfiedLinkError("Internal OpenCV library not found.")
+    companion object {
+        /**
+         * 创建 OcrEngine 实例（支持配置）
+         *
+         * @param context Android Context
+         * @param modelVersion 模型版本
+         * @param config 配置对象（可选）
+         * @param strictMode 严格模式（默认 false）
+         */
+        @JvmStatic
+        @JvmOverloads
+        operator fun invoke(
+            context: Context,
+            modelVersion: OcrModelVersion = OcrModelVersion.V3,
+            config: OcrConfig? = null,
+            strictMode: Boolean = false
+        ): OcrEngine {
+            // 配置优先级：实例配置 > 全局配置 > null（使用默认）
+            val effectiveConfig = config ?: OcrConfigManager.getGlobalConfig()
+
+            Logger.i("Initializing OcrEngine with version ${modelVersion.versionName}")
+            if (effectiveConfig != null) {
+                Logger.i("Using config with strategy ${effectiveConfig.loadStrategy}")
+            } else {
+                Logger.i("Using default configuration")
+            }
+
+            // 解析最终的模型路径
+            val resolvedPaths = ModelPathResolver.resolve(
+                context = context,
+                config = effectiveConfig,
+                version = modelVersion
+            )
+
+            // 严格模式：在初始化时验证所有路径
+            if (strictMode) {
+                Logger.i("Strict mode enabled, validating paths...")
+                val validationResult = ModelPathResolver.validate(
+                    context = context,
+                    paths = resolvedPaths,
+                    strategy = effectiveConfig?.loadStrategy ?: OcrLoadStrategy.FILE_FIRST
+                )
+
+                if (validationResult is ValidationResult.Error) {
+                    val errorMsg = "Model validation failed in strict mode:\n${validationResult.errors.joinToString("\n")}"
+                    Logger.e(errorMsg)
+                    throw ModelLoadException(errorMsg)
+                }
+                Logger.i("Path validation successful")
+            }
+
+            if (OpenCVLoader.initDebug()) {
+                Logger.i("OpenCV library found inside package.")
+            } else {
+                Logger.e("Internal OpenCV library not found.")
+                throw UnsatisfiedLinkError("Internal OpenCV library not found.")
+            }
+
+            return OcrEngine(context, modelVersion, effectiveConfig, resolvedPaths)
         }
     }
 
